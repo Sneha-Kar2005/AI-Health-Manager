@@ -1,0 +1,10 @@
+__pycache__/
+.env
+.venv/
+venv/
+*.pyc
+.pytest_cache/
+.DS_Store
+/private/
+/models/
+/assets/
