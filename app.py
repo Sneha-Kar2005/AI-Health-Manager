@@ -3,7 +3,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from gemini_client import analyze_food_image, generate_meal_plan
 from utils import load_image_from_bytes
-import os
 
 load_dotenv()
 
@@ -26,14 +25,15 @@ with st.sidebar.form("profile_form"):
 if submitted:
     st.success("Profile saved (temporary; implement DB to persist).")
 
+# ✅ Use consistent keys matching gemini_client.py
 user_profile = {
     "age": age,
     "sex": sex,
-    "weight_kg": weight,
-    "height_cm": height,
+    "weight": weight,
+    "height": height,
     "activity_level": activity,
-    "goals": goal,
-    "allergies": allergies,
+    "goal": goal,
+    "restrictions": allergies,
     "preferences": preferences,
 }
 
@@ -44,10 +44,7 @@ if st.button("Generate meal plan"):
         with st.spinner("Generating meal plan..."):
             plan = generate_meal_plan(user_profile, days=days)
         st.markdown("**Meal plan (AI):**")
-        if isinstance(plan, dict):
-            st.json(plan)
-        else:
-            st.code(str(plan))
+        st.code(plan if isinstance(plan, str) else str(plan))
     except Exception as e:
         st.error(f"Error generating meal plan: {e}")
 
@@ -62,7 +59,7 @@ if uploaded is not None:
             with st.spinner("Analyzing image..."):
                 result = analyze_food_image(img)
             st.markdown("**Analysis result:**")
-            st.json(result)
+            st.write(result)
     except Exception as e:
         st.error(f"Error analyzing image: {e}")
 
@@ -75,10 +72,10 @@ if st.button("Ask AI"):
     else:
         try:
             with st.spinner("Generating answer..."):
-                # Reuse meal plan generator for open Q&A by crafting a prompt through gemini_client
                 from gemini_client import model
                 prompt = (
-                    "You are a helpful, evidence-based health advisor. Answer concisely and cite well-known guidelines when appropriate.\n\n"
+                    "You are a helpful, evidence-based health advisor. "
+                    "Answer concisely and cite well-known guidelines when appropriate.\n\n"
                     f"Question: {q}\n\nProvide a short answer and practical recommendations."
                 )
                 resp = model.generate_content(prompt)
