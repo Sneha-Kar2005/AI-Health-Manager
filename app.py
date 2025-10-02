@@ -1,8 +1,9 @@
 # app.py - Streamlit frontend for AI Health Manager
 import streamlit as st
-import pandas as pd
-from gemini_client import analyze_food_image, generate_meal_plan, text_model
+from dotenv import load_dotenv
+from gemini_client import analyze_food_image, generate_meal_plan, model
 from utils import load_image_from_bytes
+
 
 st.set_page_config(page_title="AI Health Manager", layout="centered")
 st.title("AI-Powered Health Management System")
