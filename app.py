@@ -62,7 +62,7 @@ uploaded = st.file_uploader("Upload food photo", type=["jpg", "jpeg", "png"])
 if uploaded is not None:
     try:
         img = load_image_from_bytes(uploaded)
-        st.image(img, caption="Uploaded image", use_column_width=True)
+        st.image(img, caption="Uploaded image", use_container_width=True)
         if st.button("Analyze food"):
             with st.spinner("Analyzing image..."):
                 result = analyze_food_image(img)
