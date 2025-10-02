@@ -18,15 +18,26 @@ if not GOOGLE_API_KEY:
 # Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# Define models
-text_model = genai.GenerativeModel("gemini-1.5-pro")         # For meal plans / text tasks
-vision_model = genai.GenerativeModel("gemini-1.5-pro-vision") # For food image analysis
+# Define models (compatible with v1beta SDK)
+text_model = genai.GenerativeModel("gemini-pro")            # text-only model
+vision_model = genai.GenerativeModel("gemini-pro-vision")   # vision model
 
 # Function: analyze food image
 def analyze_food_image(image_file):
     try:
         response = vision_model.generate_content(
-            ["Analyze the nutritional content of this food. Provide calories, macros, and a short description.", image_file]
+            [
+                """Analyze the nutritional content of this food.
+                Return the result in a structured format like this:
+
+                Calories: XXX kcal
+                Protein: XX g
+                Carbs: XX g
+                Fat: XX g
+                Notes: short description of the food
+                """,
+                image_file
+            ]
         )
         return response.text
     except Exception as e:
