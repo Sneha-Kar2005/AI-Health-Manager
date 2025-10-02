@@ -1,10 +1,7 @@
 # app.py - Streamlit frontend for AI Health Manager
 import streamlit as st
-from dotenv import load_dotenv
 from gemini_client import analyze_food_image, generate_meal_plan
 from utils import load_image_from_bytes
-
-load_dotenv()
 
 st.set_page_config(page_title="AI Health Manager", layout="centered")
 st.title("AI-Powered Health Management System")
@@ -42,9 +39,19 @@ st.header("Generate personalized meal plan")
 if st.button("Generate meal plan"):
     try:
         with st.spinner("Generating meal plan..."):
-            plan = generate_meal_plan(user_profile, days=days)
-        st.markdown("**Meal plan (AI):**")
-        st.code(plan if isinstance(plan, str) else str(plan))
+            plan_text = generate_meal_plan(user_profile, days=days)
+
+        # Try to parse the plan into structured days
+        st.subheader("📅 Personalized Meal Plan")
+        days_split = plan_text.split("Day ")
+        for d in days_split:
+            if d.strip() == "" or not d[0].isdigit():
+                continue
+            day_num, meals = d.split("\n", 1)
+            st.markdown(f"### 🌟 Day {day_num.strip()}")
+            st.markdown(meals.replace("-", "•"))  # bullet points instead of dashes
+            st.markdown("---")
+
     except Exception as e:
         st.error(f"Error generating meal plan: {e}")
 
@@ -71,14 +78,14 @@ if st.button("Ask AI"):
         st.warning("Please enter a question.")
     else:
         try:
+            from gemini_client import text_model
             with st.spinner("Generating answer..."):
-                from gemini_client import model
                 prompt = (
                     "You are a helpful, evidence-based health advisor. "
                     "Answer concisely and cite well-known guidelines when appropriate.\n\n"
                     f"Question: {q}\n\nProvide a short answer and practical recommendations."
                 )
-                resp = model.generate_content(prompt)
+                resp = text_model.generate_content(prompt)
                 st.markdown("**Answer:**")
                 st.write(resp.text or resp)
         except Exception as e:
