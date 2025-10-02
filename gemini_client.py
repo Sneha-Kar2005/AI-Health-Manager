@@ -3,66 +3,65 @@ import streamlit as st
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# Load environment variables for local use
+# Load .env for local dev
 load_dotenv()
 
-# Try secrets first (cloud), then .env (local)
+# Get API key (first from Streamlit secrets, fallback to local .env)
 if "GOOGLE_API_KEY" in st.secrets:
     GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 else:
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
-    raise ValueError("❌ GOOGLE_API_KEY not found. Please set it in .env (local) or Streamlit Secrets (cloud).")
+    raise ValueError("❌ GOOGLE_API_KEY not found. Please set it in Streamlit secrets or .env file.")
 
 # Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# Define models (compatible with v1beta SDK)
-text_model = genai.GenerativeModel("gemini-pro")            # text-only model
-vision_model = genai.GenerativeModel("gemini-pro-vision")   # vision model
+# ✅ Auto-select best available model
+def get_best_model():
+    try:
+        models = [m for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
+        # Prefer latest stable models
+        preferred_order = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro", "gemini-1.0-pro-vision"]
+        for name in preferred_order:
+            for m in models:
+                if name in m.name:
+                    print(f"✅ Using model: {m.name}")
+                    return genai.GenerativeModel(m.name)
+        # fallback
+        if models:
+            print(f"⚠️ Using fallback model: {models[0].name}")
+            return genai.GenerativeModel(models[0].name)
+        else:
+            raise RuntimeError("❌ No available Gemini models found for your API key.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch models: {e}")
 
-# Function: analyze food image
+# Create model instance
+model = get_best_model()
+
+# -----------------------
+# Functions
+# -----------------------
+
 def analyze_food_image(image_file):
-    try:
-        response = vision_model.generate_content(
-            [
-                """Analyze the nutritional content of this food.
-                Return the result in a structured format like this:
+    """Analyze nutritional content from an uploaded image."""
+    response = model.generate_content(
+        ["Analyze the nutritional content of this food image.", image_file]
+    )
+    return response.text
 
-                Calories: XXX kcal
-                Protein: XX g
-                Carbs: XX g
-                Fat: XX g
-                Notes: short description of the food
-                """,
-                image_file
-            ]
-        )
-        return response.text
-    except Exception as e:
-        return f"❌ Error analyzing food image: {e}"
-
-# Function: generate personalized meal plan
 def generate_meal_plan(profile, days=3):
-    try:
-        prompt = f"""
-        Create a personalized {days}-day meal plan.
+    """Generate a personalized meal plan."""
+    prompt = f"""
+    Create a personalized {days}-day meal plan.
 
-        Profile:
-        Age: {profile['age']}, Sex: {profile['sex']},
-        Weight: {profile['weight']} kg, Height: {profile['height']} cm,
-        Activity level: {profile['activity_level']}, Goal: {profile['goal']},
-        Allergies/restrictions: {profile['restrictions']}, Preferences: {profile['preferences']}
-
-        Format the output in a structured way:
-        - Day 1
-          - Breakfast: ...
-          - Lunch: ...
-          - Dinner: ...
-          - Snacks: ...
-        """
-        response = text_model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"❌ Error generating meal plan: {e}"
+    Profile:
+    Age: {profile['age']}, Sex: {profile['sex']},
+    Weight: {profile['weight']} kg, Height: {profile['height']} cm,
+    Activity level: {profile['activity_level']}, Goal: {profile['goal']},
+    Allergies/restrictions: {profile['restrictions']}, Preferences: {profile['preferences']}
+    """
+    response = model.generate_content(prompt)
+    return response.text
