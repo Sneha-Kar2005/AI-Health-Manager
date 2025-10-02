@@ -25,7 +25,7 @@ with st.sidebar.form("profile_form"):
 if submitted:
     st.success("Profile saved (temporary; implement DB to persist).")
 
-# ✅ Use consistent keys matching gemini_client.py
+# ✅ Unified profile keys
 user_profile = {
     "age": age,
     "sex": sex,
