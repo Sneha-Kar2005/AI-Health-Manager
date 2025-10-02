@@ -1,6 +1,7 @@
 # app.py - Streamlit frontend for AI Health Manager
 import streamlit as st
-from gemini_client import analyze_food_image, generate_meal_plan
+import pandas as pd
+from gemini_client import analyze_food_image, generate_meal_plan, text_model
 from utils import load_image_from_bytes
 
 st.set_page_config(page_title="AI Health Manager", layout="centered")
@@ -41,16 +42,41 @@ if st.button("Generate meal plan"):
         with st.spinner("Generating meal plan..."):
             plan_text = generate_meal_plan(user_profile, days=days)
 
-        # Try to parse the plan into structured days
         st.subheader("📅 Personalized Meal Plan")
-        days_split = plan_text.split("Day ")
-        for d in days_split:
-            if d.strip() == "" or not d[0].isdigit():
-                continue
-            day_num, meals = d.split("\n", 1)
-            st.markdown(f"### 🌟 Day {day_num.strip()}")
-            st.markdown(meals.replace("-", "•"))  # bullet points instead of dashes
-            st.markdown("---")
+
+        if "Day 1" in plan_text:
+            # Split into structured days
+            days_split = plan_text.split("Day ")
+            for d in days_split:
+                if d.strip() == "" or not d[0].isdigit():
+                    continue
+                try:
+                    day_num, meals = d.split("\n", 1)
+                    st.markdown(f"### 🌟 Day {day_num.strip()}")
+
+                    # Create dict for meals
+                    meal_dict = {"Breakfast": "", "Lunch": "", "Dinner": "", "Snacks": ""}
+
+                    for line in meals.split("\n"):
+                        line = line.strip()
+                        if line.lower().startswith("breakfast"):
+                            meal_dict["Breakfast"] = line.split(":", 1)[-1].strip()
+                        elif line.lower().startswith("lunch"):
+                            meal_dict["Lunch"] = line.split(":", 1)[-1].strip()
+                        elif line.lower().startswith("dinner"):
+                            meal_dict["Dinner"] = line.split(":", 1)[-1].strip()
+                        elif line.lower().startswith("snack"):
+                            meal_dict["Snacks"] = line.split(":", 1)[-1].strip()
+
+                    df = pd.DataFrame([meal_dict])
+                    st.table(df)
+
+                except Exception:
+                    st.markdown(meals.replace("-", "•"))
+                st.markdown("---")
+        else:
+            # Fallback: show raw plan text
+            st.markdown(plan_text)
 
     except Exception as e:
         st.error(f"Error generating meal plan: {e}")
@@ -78,7 +104,6 @@ if st.button("Ask AI"):
         st.warning("Please enter a question.")
     else:
         try:
-            from gemini_client import text_model
             with st.spinner("Generating answer..."):
                 prompt = (
                     "You are a helpful, evidence-based health advisor. "
